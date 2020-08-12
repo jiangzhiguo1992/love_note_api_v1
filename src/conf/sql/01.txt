@@ -1,0 +1,64 @@
+
+-----sql查询公告列表(级联read)
+SELECT id,create_at,title,content_type,content_text,read_nums
+FROM i_ta.notice
+LEFT JOIN (
+        SELECT i_ta.notice.id as nid,SUM(`read`) AS read_nums
+            FROM i_ta.notice
+            LEFT JOIN i_ta.notice_read
+            ON i_ta.notice.id=i_ta.notice_read.notice_id AND i_ta.notice_read.user_id=7 AND notice_read.status>=0
+            GROUP BY i_ta.notice.id
+     ) as notice_read
+ON id=nid
+Where status>=0 AND create_at>=0
+ORDER BY create_at DESC
+LIMIT 0,100
+
+---sql查询意见列表(级联comment和follow)
+SELECT temp_1.id,temp_1.status,temp_1.create_at,temp_1.update_at,temp_1.user_id,temp_1.title,temp_1.content_type,temp_1.content_text,
+	temp_1.content_img,temp_1.official,temp_1.top,temp_1.follow_count,COUNT(i_ta.suggest_comment.id) AS comment_count
+FROM (
+    SELECT i_ta.suggest.id,i_ta.suggest.status,i_ta.suggest.create_at,i_ta.suggest.update_at,i_ta.suggest.user_id,i_ta.suggest.title,i_ta.suggest.content_type,
+    i_ta.suggest.content_text,i_ta.suggest.content_img,i_ta.suggest.official,i_ta.suggest.top,COUNT(i_ta.suggest_follow.id) AS follow_count
+        FROM i_ta.suggest
+        LEFT JOIN i_ta.suggest_follow
+        ON i_ta.suggest.id = i_ta.suggest_follow.suggest_id AND i_ta.suggest_follow.status >= 0
+        WHERE i_ta.suggest.status >= 0
+        #  AND i_ta.suggest.content_type = 0
+        GROUP BY i_ta.suggest.id
+) AS temp_1
+LEFT JOIN i_ta.suggest_comment
+ON temp_1.id = i_ta.suggest_comment.suggest_id AND i_ta.suggest_comment.status >=0
+GROUP BY temp_1.id
+ORDER BY temp_1.top DESC,temp_1.update_at DESC
+
+---sql查询cid配对列表(级联state)
+SELECT couple.id,couple.status,couple.create_at,couple.update_at,couple.creator_id,couple.invitee_id,couple.creator_name,couple.invitee_name,couple.creator_avatar,couple.invitee_avatar,state.id,state.status,state.create_at,state.user_id,state.state
+FROM i_ta.couple as couple
+LEFT JOIN (
+        SELECT *
+            FROM i_ta.couple_state
+            WHERE status>=0 AND couple_id=?
+            ORDER BY create_at DESC
+            LIMIT 0,1
+     ) as state
+ON couple.id=state.couple_id
+Where couple.status>=0 AND couple.id=9
+
+---sql查询uid配对列表(级联state)
+SELECT couple.id,couple.status,couple.create_at,couple.update_at,couple.creator_id,couple.invitee_id,couple.creator_name,couple.invitee_name,couple.creator_avatar,couple.invitee_avatar,state.id,state.status,state.create_at,state.user_id,state.state
+FROM i_ta.couple as couple
+LEFT JOIN (
+        SELECT *
+            FROM i_ta.couple_state
+            WHERE status>=0
+     ) as state
+ON couple.id=state.couple_id
+Where couple.status>=0 AND (couple.creator_id=7 OR couple.invitee_id=7)
+ORDER BY state.create_at desc
+LIMIT 0,1
+
+---sql修改place的cid
+UPDATE `place`
+SET `place`.`couple_id`=(SELECT `couple`.`id` FROM `couple` WHERE  (`couple`.`creator_id` = `place`.`user_id`  OR `couple`.`invitee_id`= `place`.`user_id`) LIMIT 1 )
+WHERE `place`.`couple_id`=0

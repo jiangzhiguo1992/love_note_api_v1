@@ -1,0 +1,8 @@
+# Created by .ignore support plugin (hsz.mobi)
+Would skip repository src/github.com/go-sql-driver/mysql/
+Would skip repository src/github.com/gomodule/redigo
+bin/*
+pkg/*
+src/api_old_2019_12_07
+src/api
+src/log

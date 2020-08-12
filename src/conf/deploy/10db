@@ -1,0 +1,211 @@
+
+---------------------------------------redis---------------------------------------
+
+redis:
+    redis-cli -h 47.94.224.110 -p 6379
+    auth love_note_api
+    keys * (获取所有的key)
+    get key (查看某一个key的value)
+    del key (删除key)
+    ttl key (查看key的过期时间)
+
+---安装并部署redis
+    1.创建目录/mnt/redis/data，/mnt/redis/data/log/love_note.log
+        配置/mnt/redis/data/love_note.conf
+        -----
+    2.下载/更新官方镜像
+        docker pull redis
+    2.创建容器，并run
+        docker run --name redis_01 -p 6379:6379 --restart=always  -v /mnt/redis/data:/data -d redis redis-server /data/love_note.conf
+        端口映射 -p 6379:6379
+        崩溃自启 --restart=always
+        数据目录映射 -v /mnt/redis/data:/data
+        后台运行 -d
+        执行配置启动命令 redis-server /data/love_note.conf
+
+---love_note.conf配置
+port "6379"
+daemonize "no"
+# maxmemory "0"
+maxclients "10000"
+databases "16"
+dir "/data"
+requirepass "love_note_api"
+tcp-keepalive "100"
+loglevel "notice"
+logfile "/data/log/love_note.log"
+slowlog-max-len "1000"
+slowlog-log-slower-than "1000"
+save ""
+bind "0.0.0.0"
+
+----------------------------------mysql----------------------------------
+
+mysql(love_note):
+    root: -root -LAOjiang1
+    mysql -h 47.94.224.110 -P 3306 -u root -p
+
+---安装并部署mysql
+    1.创建目录mnt/mysql/data，/mnt/mysql/conf，/mnt/mysql/log
+        配置/mnt/mysql/conf/my.conf
+        -----
+    2.下载/更新官方镜像 (时间较长)
+        docker pull mysql
+    3.创建容器，并run
+        docker run --name mysql_01 -p 3306:3306 --restart=always -v /mnt/mysql/data:/var/lib/mysql -v /mnt/mysql/conf:/etc/mysql/conf.d -v /mnt/mysql/log:/var/log/mysql -e MYSQL_ROOT_PASSWORD=LAOjiang1 -d mysql
+        端口映射 -p 3306:3306
+        崩溃自启 --restart=always
+        数据目录映射 -v /mnt/mysql/data:/var/lib/mysql
+        配置目录映射 -v /mnt/mysql/conf:/etc/mysql/conf.d
+        日志目录映射 -v /mnt/mysql/log:/var/log/mysql
+        设置root密码 -e MYSQL_ROOT_PASSWORD=LAOjiang1
+        在后台运行 -d
+    4.查看容器id，并进入容器
+        docker ps -a
+        docker exec -it 容器id bin/bash
+    5.apt升级，下载日志系统和vim 并修改log目录权限
+        chmod 777 /var/log/mysql
+        apt-get update
+        apt-get install -y rsyslog
+        apt-get install -y vim
+    6.修改rsyslog中cron的配置，corntab 和 /var/log/corn.log正常运行
+        vi /etc/rsyslog.conf，将cron前面的#删去，并重启docker mysql_01
+        (以下3个步骤每次docker mysql_01重启都要做一遍，corntab -e 测试是否成功)
+        1.service rsyslog restart
+        2.service cron restart
+        3.service cron status
+        4.注意 要等大概5分钟 corntab -e 才有反应
+    7.执行 corntab -e 开始数据定时备份，每天凌晨4点
+        先创建目录/var/lib/mysql/backups/love_note/
+        0 4 * * * mysqldump -u root -pLAOjiang1 love_note > /var/lib/mysql/backups/love_note/bak_$(date +\%Y\%m\%d_\%H\%M\%S).sql
+    9.创建数据库和包含的表，或备份
+        创建数据库：mysql -u root -p source 文件名称.sql
+        数据还原：mysql -u root -p love_note < 备份文件名称.sql
+    10.账号操作
+        1.修改mysql加密方式，使得客户端可以root登录，然后在workbin中分配权限
+        --- mysql> ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'LAOjiang1';
+        --- mysql> ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'LAOjiang1';
+        2.创建三个个子账号，然后在workbench中分配权限
+        --- mysql> CREATE USER 'api_golang_01'@'localhost' IDENTIFIED BY 'gg_love_note_api_01';
+        --- mysql> ALTER USER 'api_golang_01'@'localhost' IDENTIFIED WITH mysql_native_password BY 'gg_love_note_api_01';
+        --- mysql> CREATE USER 'api_golang_01'@'%' IDENTIFIED BY 'gg_love_note_api_01';
+        --- mysql> ALTER USER 'api_golang_01'@'%' IDENTIFIED WITH mysql_native_password BY 'gg_love_note_api_01';
+
+        --- mysql> CREATE USER 'api_golang_02'@'localhost' IDENTIFIED BY 'gg_love_note_api_02';
+        --- mysql> ALTER USER 'api_golang_02'@'localhost' IDENTIFIED WITH mysql_native_password BY 'gg_love_note_api_02';
+        --- mysql> CREATE USER 'api_golang_02'@'%' IDENTIFIED BY 'gg_love_note_api_02';
+        --- mysql> ALTER USER 'api_golang_02'@'%' IDENTIFIED WITH mysql_native_password BY 'gg_love_note_api_02';
+
+        --- mysql> CREATE USER 'api_golang_03'@'localhost' IDENTIFIED BY 'gg_love_note_api_03';
+        --- mysql> ALTER USER 'api_golang_03'@'localhost' IDENTIFIED WITH mysql_native_password BY 'gg_love_note_api_03';
+        --- mysql> CREATE USER 'api_golang_03'@'%' IDENTIFIED BY 'gg_love_note_api_03';
+        --- mysql> ALTER USER 'api_golang_03'@'%' IDENTIFIED WITH mysql_native_password BY 'gg_love_note_api_03';
+        3.最后刷新
+        --- mysql> FLUSH PRIVILEGES;
+        4.查看
+        --- mysql> select host,user,plugin from mysql.user;
+
+----my.conf配置
+[client]
+default-character-set = utf8mb4
+
+[mysql]
+default-character-set = utf8mb4
+
+[mysqld]
+port = 3306
+datadir = /var/lib/mysql
+server_id = 30011
+
+character-set-client-handshake = FALSE
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+default-time-zone = system
+default-storage-engine = InnoDB
+explicit_defaults_for_timestamp=true
+
+key_buffer_size = 256M
+sort_buffer_size = 8M
+read_buffer_size = 8M
+join_buffer_size = 8M
+read_rnd_buffer_size = 64M
+myisam_sort_buffer_size = 128M
+bulk_insert_buffer_size = 32M
+
+query_cache_size = 256M
+query_cache_limit = 2M
+query_cache_min_res_unit = 2K
+
+thread_stack = 256K
+thread_cache_size = 100
+# thread_concurrency = 4
+
+max_connections = 10000
+max_connect_errors = 10000
+open_files_limit = 10240
+max-user-connections = 0
+table_open_cache = 5120
+interactive_timeout = 86400
+wait_timeout = 86400
+back_log = 500
+
+# error
+log-error = /var/log/mysql/error.log
+# change
+log-bin = /var/log/mysql/bin.log
+log-bin-index = /var/log/mysql/bin.index
+max_binlog_size = 1G
+expire_logs_days = 30
+binlog_cache_size = 1M
+# select
+general_log = 1
+general_log_file = /var/log/mysql/general.log
+# slow
+slow_query_log = 1
+long_query_time = 2
+slow-query-log-file = /var/log/mysql/slow.log
+
+innodb_flush_log_at_trx_commit = 1
+innodb_read_io_threads = 4
+innodb_write_io_threads = 4
+innodb_open_files = 65536
+innodb_purge_threads = 1
+innodb_log_buffer_size = 8M
+innodb_log_file_size = 100M
+innodb_log_files_in_group = 3
+
+----基本命令
+0.查看编码
+    SHOW VARIABLES WHERE Variable_name LIKE 'character\_set\_%' OR Variable_name LIKE 'collation%';
+1.查询mysql服务
+    systemctl status mysqld
+    ps -ef | grep mysqld  检查MySQL服务器是否启动
+3.查询数据库
+    show databases;
+4.进入数据库
+    use databaseName;
+5.查询对应数据库下的表
+    show tables from databaseName;
+5.查询对应表的字段
+    show columns from 表名;
+6.查询表中的数据
+    select * from columns where table_name=databaseName;
+7.查询mysql连接数
+    show processlist;
+2.查看mysql数据位置
+    show global variables like "%datadir%";
+9.查询mysql日志服务
+    show variables like 'log_%';
+10.慢查询信息
+    show variables like 'slow_query%';
+    show variables like 'long_query_time';
+11.查询多核利用
+    show variables like '%_io_threads';
+12.查看最大连接数
+    show variables like '%max_connections%';
+13.重新设置
+    set global max_connections=10000;
+    也可以在/etc/mysql/my.cnf里面设置数据库的最大连接数，在[mysqld]节点下 设置 max_connections = 10000
+14.查看当前连接信息
+    show status like 'Threads%';

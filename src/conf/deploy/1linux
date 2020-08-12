@@ -1,0 +1,83 @@
+
+---ssh
+    ssh love_note_root -密码
+
+---apt
+    apt update 更新apt软件源信息
+    apt upgrade 更新已安装的包 (别手贱!!!)
+    apt auto-clean 清理无用的包
+
+---linux
+    tail -n 100 ---
+
+---docker
+    下载：apt-get install -y docker.io
+    版本信息：docker info / docker -v
+    运行状态：systemctl status docker
+    列出镜像：docker images
+    删除镜像：docker rmi ---
+    创建并运行容器：docker run -it --name [容器名] -d -p [宿主端口]:[容器端口] -v [本地动作目录]:[容器映射目录] -w [容器工作区间] [镜像名]
+    容器运行情况：docker ps -a
+    进入容器：docker exec -it 容器id bin/bash
+    删除容器：docker rm ---
+    容器日志：docker logs -f -t --tail 100 容器名
+    查看占用空间：docker system df
+    查看运行状况：docker stats 容器id
+
+---ECS
+    1.创建用户，自动续费，没了~
+
+---RDS-mysql
+    1.开启数据库代理安全模式，开启透明切换，调试mysql参数，设置备份规则
+    2.开启内网和外网的地址，设置IP白名单(生产环境需关闭外网+测试白名单)
+    3.增加只读实例，开启读写分离，替换读写分离地址
+    4.创建root高权限用户，并登录数据库，执行建库建表SQL
+    5.应用用户创建，并赋予项目db权限管理
+
+---RDS-redis
+    1.用购买时创建的密码，调试redis参数，设置IP白名单(生产环境需关闭测试白名单)
+
+---OSS
+    1.新建私有bucket love-note-01，更换conf中的bucket，并开启日志
+    2.开启CDN OSS方式开启CDN(注意不要开启私有bucket回源)
+
+---STS
+    1.策略管理
+        1.添加自定义：policy-love-note-oss-normal
+            {
+              "Version": "1",
+              "Statement": [
+                {
+                  "Action": "oss:*",
+                  "Effect": "Allow",
+                  "Resource": "acs:oss:*:*:love-note-01/*"
+                },
+                {
+                  "Action": "oss:Delete*",
+                  "Effect": "Deny",
+                  "Resource": "acs:oss:*:*:love-note-01/*"
+                }
+              ]
+            }
+    2.角色管理
+        1.新建角色：role-love-note-oss-normal
+            {
+              "Statement": [
+                {
+                  "Action": "sts:AssumeRole",
+                  "Effect": "Allow",
+                  "Principal": {
+                    "RAM": [
+                      "acs:ram::1869456030811508:root"
+                    ]
+                  }
+                }
+              ],
+              "Version": "1"
+            }
+        2.添加自定义策略：policy-love-note-oss-normal
+        3.替换conf中的 ali_id、role_name
+    3.用户管理
+        1.新建用户：ram-love_note-oss-normal
+        2.保存并替换conf中的 user_key_id、user_key_secret
+        3.添加系统策略：AliyunSTSAssumeRoleAccess

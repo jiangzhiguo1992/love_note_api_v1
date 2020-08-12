@@ -1,0 +1,31 @@
+
+
+---安装并部署golang
+    1.创建目录/root/go/love_note_api_v1_01/src，/root/go/love_note_api_v1_02/src，
+        /root/go/love_note_api_v1_01/src/log，/root/go/love_note_api_v1_02/src/log，
+        ---
+    2.本地go项目交叉编译，并上传至服务器
+        交叉编译(进入src，不必依赖conf文件)
+            1.CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o api
+        运行文件
+            1.scp -r /Users/gg/WorkSpace/tj-gzm/love_note_api_v1/src/api root@47.94.224.110:/root/go/love_note_api_v1_01/src/api
+            2.scp -r /Users/gg/WorkSpace/tj-gzm/love_note_api_v1/src/api root@47.94.224.110:/root/go/love_note_api_v1_02/src/api
+        配置文件 -- http_port + 测试(log + mysql + redis)
+            1.scp -r /Users/gg/WorkSpace/tj-gzm/love_note_api_v1/src/conf root@47.94.224.110:/root/go/love_note_api_v1_01/src/conf
+            2.scp -r /Users/gg/WorkSpace/tj-gzm/love_note_api_v1/src/conf root@47.94.224.110:/root/go/love_note_api_v1_02/src/conf
+        资源文件
+            1.scp -r /Users/gg/WorkSpace/tj-gzm/love_note_api_v1/src/static root@47.94.224.110:/root/go/love_note_api_v1_01/src/static
+            2.scp -r /Users/gg/WorkSpace/tj-gzm/love_note_api_v1/src/static root@47.94.224.110:/root/go/love_note_api_v1_02/src/static
+    3.下载本地docker依赖，防止suplink错误发生
+        apt install aufs-tools
+        apt install cgroup-lite
+    4.下载/更新官方镜像 (时间较长)
+        docker pull golang
+    5.创建容器，并run，并执行web
+        1.docker run --name love_note_api_v1_01 -p 30011:30011 --restart=always -v /root/go/love_note_api_v1_01:/go -d golang ./src/api
+        2.docker run --name love_note_api_v1_02 -p 30012:30012 --restart=always -v /root/go/love_note_api_v1_02:/go -d golang ./src/api
+        端口映射 -p 30011:30011
+        崩溃自启 --restart=always
+        项目目录映射 -v /root/go/love_note_api_v1:/go
+        后台运行 -d
+        执行命令 ./src/api
